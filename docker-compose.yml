@@ -41,10 +41,12 @@ services:
       #   Disable all LLM / AI features, prompts etc — leave unset/false, we want this on.
       # - LLM_FEATURES_DISABLED=true
       #
-      #   LLM env var overrides (take priority over datastore/UI settings) — set once we
-      #   get to the LLM relevance-filtering step, left commented for now:
-      # - LLM_MODEL=anthropic/claude-...
-      # - LLM_API_KEY=sk-ant-...
+      #   LLM relevance filtering — model via litellm's "anthropic/<model-id>" convention.
+      #   Key comes from a .env file (gitignored) via ${ANTHROPIC_API_KEY}, not hardcoded
+      #   here, since this file is tracked in the fork. Create ./.env with a line:
+      #     ANTHROPIC_API_KEY=sk-ant-...
+      - LLM_MODEL=anthropic/claude-haiku-4-5-20251001
+      - LLM_API_KEY=${ANTHROPIC_API_KEY}
       #
       #   A valid timezone name, see https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
       # - TZ=America/Los_Angeles
