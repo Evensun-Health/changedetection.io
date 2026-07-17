@@ -27,6 +27,9 @@ venv/
 datastore/
 test-datastore/
 
+# Local polling script log (see scripts/poll_changes.py)
+scripts/poll.log
+
 # Memory consumption log
 test-memory.log
 
