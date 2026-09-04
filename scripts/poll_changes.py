@@ -1,4 +1,23 @@
 """
+RETIRED 2026-07-17. Kept for the record; do not run.
+
+This polled the changedetection.io REST API and appended to the vault's
+changedetection-alerts.md on a Windows Task Scheduler timer. It was replaced
+because the instance is bound to 127.0.0.1 and a Cowork scheduled task has no
+route to localhost -- so the working design reads the datastore FILES directly
+as a connected folder instead.
+
+It was never registered in Task Scheduler and there is no poll.log, so it
+almost certainly never ran. If it ever did run now it would append to
+changedetection-alerts.md in the July format and corrupt the current
+three-part structure.
+
+Live system: scripts/cd_digest_prep.py plus the `changedetection-digest`
+scheduled task. See knowledge/sop - changedetection monitoring.md and the
+project note "Change Detection Monitoring" in the vault.
+"""
+
+"""
 poll_changes.py
 
 Polls a local changedetection.io instance's REST API for watches that have
