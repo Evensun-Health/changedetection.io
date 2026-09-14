@@ -30,6 +30,11 @@ test-datastore/
 # Local polling script log (see scripts/poll_changes.py)
 scripts/poll.log
 
+# Vendored brotli install for the digest pre-processor (see cd_digest_prep.py) --
+# platform-specific compiled package, installed once and reused across scheduled
+# runs; not meant to be committed.
+scripts/_vendor/
+
 # Memory consumption log
 test-memory.log
 
