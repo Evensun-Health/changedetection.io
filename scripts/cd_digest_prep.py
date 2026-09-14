@@ -49,36 +49,44 @@ from pathlib import Path
 
 # --------------------------------------------------------------------------
 # brotli is not preinstalled in the Cowork sandbox (verified 2026-09-02 by the
-# cd-plumbing-smoke-test task). Bootstrap it rather than fail the run.
+# cd-plumbing-smoke-test task), and the sandbox itself is thrown away between
+# scheduled runs -- so a plain "pip install" at the top of this script has to
+# redo a real network install every single run. That has failed intermittently
+# (09-03, 09-04, 09-09, 09-10, 09-11) even after the 09-04 cache-invalidation
+# fix below, because it still depends on a subprocess call, a network
+# round-trip, and an import-cache refresh all succeeding, every time, forever.
 #
-# If the bootstrap fails, `brotli` stays None and every .txt.br snapshot this
-# run is unreadable -- that's an operational problem, not a per-watch quirk,
-# so we keep the pip failure reason around (`_BROTLI_INSTALL_ERROR`) and
-# surface it via health_report() once we know how many snapshots it actually
-# affected (see `brotli_skipped` in main()), rather than letting it hide
-# inside individual watch sections.
+# Fix (09-14): the sandbox is thrown away between runs, but the repo folder
+# is not -- it's bind-mounted from disk, so anything written there survives.
+# Keep the installed package in `scripts/_vendor` and check there FIRST. Once
+# it exists, every later run finds brotli already sitting on disk and skips
+# the network/subprocess/pip dance entirely. Only if that copy is ever
+# missing do we fall back to a live install -- and when we do, we install
+# straight into `_vendor` so the *next* run is self-healed too.
 #
-# Root cause found 2026-09-04: pip installing brotli into a subprocess does
-# not make it visible to THIS already-running interpreter -- Python's import
-# system caches negative lookups (a module it already failed to find) made
-# before the package existed on disk, in `sys.path_importer_cache`. Without
-# invalidating that cache, the retry `import brotli` below fails even though
-# the package is genuinely on disk and importable in a fresh process (this
-# is exactly what happened on 09-03 and again on 09-04: pip exited 0 with no
-# output, i.e. success, and a fresh shell right after had brotli available).
-# `importlib.invalidate_caches()` forces Python to re-scan sys.path before
-# the retry, which is the actual fix -- everything before this was reporting
-# the symptom loudly, not curing it.
+# If the bootstrap still fails, `brotli` stays None and every .txt.br snapshot
+# this run is unreadable -- that's an operational problem, not a per-watch
+# quirk, so we keep the pip failure reason around (`_BROTLI_INSTALL_ERROR`)
+# and surface it via health_report() once we know how many snapshots it
+# actually affected (see `brotli_skipped` in main()), rather than letting it
+# hide inside individual watch sections.
 # --------------------------------------------------------------------------
+_VENDOR_DIR = Path(__file__).resolve().parent / "_vendor"
+if _VENDOR_DIR.is_dir() and str(_VENDOR_DIR) not in sys.path:
+    sys.path.insert(0, str(_VENDOR_DIR))
+
 _BROTLI_INSTALL_ERROR: str | None = None
 try:
     import brotli  # type: ignore
 except ImportError:  # pragma: no cover
     _install = subprocess.run(
         [sys.executable, "-m", "pip", "install", "brotli",
-         "--break-system-packages", "-q"],
+         "--break-system-packages", "-q",
+         "--target", str(_VENDOR_DIR)],
         check=False, capture_output=True, text=True,
     )
+    if str(_VENDOR_DIR) not in sys.path:
+        sys.path.insert(0, str(_VENDOR_DIR))
     importlib.invalidate_caches()
     try:
         import brotli  # type: ignore
